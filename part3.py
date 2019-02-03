@@ -35,7 +35,7 @@ def MSE(W, b, x, y, reg):
     
 def buildGraph(train_X, train_Y,test_X,test_Y,valid_X,valid_Y,beta1=None, beta2=None, epsilon=None, lossType=None, learning_rate=0.001):
     # Your implementation here
-    training_epochs = 700
+    training_epochs = 300
   
     W = tf.Variable(tf.random.truncated_normal(shape=(784,1),stddev=0.5), dtype=tf.float32, name="weight")
     b = tf.Variable(0.0, name="bias",dtype=tf.float32)
@@ -46,17 +46,18 @@ def buildGraph(train_X, train_Y,test_X,test_Y,valid_X,valid_Y,beta1=None, beta2=
     
     allx = tf.placeholder(tf.float32, shape=(3500,784))
     ally = tf.placeholder(tf.float32, shape=(3500,1))
-    allpred=tf.matmul(allx,W)
+    allpred=tf.matmul(allx,W)+b
     allcost=tf.reduce_sum(pow(allpred-ally,2))/7000
+
 
     validx = tf.placeholder(tf.float32,shape=(100,784))
     validy = tf.placeholder(tf.float32,shape=(100,1))
-    validpred=tf.matmul(validx,W)
+    validpred=tf.matmul(validx,W)+b
     validcost=tf.reduce_sum(pow(validpred-validy,2))/200
 
     testx = tf.placeholder(tf.float32,shape=(145,784))
     testy = tf.placeholder(tf.float32,shape=(145,1)) 
-    testpred=tf.matmul(testx,W)
+    testpred=tf.matmul(testx,W)+b
     testcost=tf.reduce_sum(pow(testpred-testy,2))/290
     
     y_pred = tf.matmul(tf.transpose(W),x) + b
@@ -66,7 +67,7 @@ def buildGraph(train_X, train_Y,test_X,test_Y,valid_X,valid_Y,beta1=None, beta2=
     init = tf.global_variables_initializer()
    
     with tf.Session() as sess:
-        
+        c,v,t,acc = [],[],[],[]
         sess.run(init)
         for epoch in range(training_epochs):
             train_X,train_Y = shuffle(train_X,train_Y)
@@ -78,18 +79,40 @@ def buildGraph(train_X, train_Y,test_X,test_Y,valid_X,valid_Y,beta1=None, beta2=
                     sess.run(optimizer,feed_dict={x:xo,y:yo})
                 left+=1
                 right+=1
-            print("epoch ", epoch)
                 
-        print("Optimization Finished!")
-        print("W=", sess.run(W), "b=", sess.run(b), '\n')
-
-        training_cost = sess.run(allcost,feed_dict={allx:train_X, ally:train_Y})
-        print("Training cost=", training_cost, '\n')
-        validation_cost = sess.run(validcost,feed_dict={validx:valid_X, validy:valid_Y})
-        print("Training cost=", validation_cost, '\n')
-        testing_cost = sess.run(testcost,feed_dict={testx:test_X, testy:test_Y})
-        print("Training cost=", testing_cost, '\n')
+            print("epoch ", epoch)
+            
+            
+           # training_acc = tf.metrics.accuracy(train_Y,allpred)
+           # print(training_acc)
+            #print(sess.run(allpred,feed_dict={allx:train_X}))
+            
+            training_cost = sess.run(allcost,feed_dict={allx:train_X, ally:train_Y})
+            c.append(training_cost)
+            
+            validation_cost = sess.run(validcost,feed_dict={validx:valid_X, validy:valid_Y})
+            v.append(validation_cost)
+            
+            testing_cost = sess.run(testcost,feed_dict={testx:test_X, testy:test_Y})
+            t.append(testing_cost)
+            
+            
+        trainC = np.asarray(c)
+        np.savetxt("trainCost.csv",trainC,delimiter=",")
         
+        validC = np.asarray(v)
+        np.savetxt("validCost.csv",validC,delimiter=",")
+        
+        testC = np.asarray(t)
+        np.savetxt("testCost.csv",testC,delimiter=",")
+        
+        weights = np.asarray(sess.run(W))
+        np.savetxt("weight.csv",weights,delimiter=",")
+        
+        bias = np.asarray(np.reshape(sess.run(b),(1,1)))
+        np.savetxt("bias.csv",bias,delimiter=",")
+        
+        print("Optimization Finished!")
         
 trainData, validData, testData, trainTarget, validTarget, testTarget = loadData()
 trainData = trainData.reshape(3500,784)
